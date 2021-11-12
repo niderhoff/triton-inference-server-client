@@ -62,7 +62,7 @@ namespace tc = triton::client;
 
 namespace {
 
-enum ScaleType { NONE = 0, VGG = 1, INCEPTION = 2 };
+enum ScaleType { NONE = 0, VGG = 1, INCEPTION = 2, EFFICIENTNET = 3 };
 
 enum ProtocolType { HTTP = 0, GRPC = 1 };
 
@@ -136,6 +136,15 @@ Preprocess(
       sample_final = sample_type - cv::Scalar(128);
     } else {
       sample_final = sample_type - cv::Scalar(123, 117, 104);
+    }
+  } else if (scale == ScaleType::EFFICIENTNET) {
+    if (img_channels == 1) {
+      sample_final = sample_type.mul(cv::Scalar(1 / 255.0));
+      sample_final = sample_final - cv::Scalar(0.0);
+    } else {
+      sample_final =
+          sample_type.mul(cv::Scalar(1 / 255.0, 1 / 255.0, 1 / 255.0));
+      sample_final = sample_final - cv::Scalar(0.0, 0.0, 0.0);
     }
   } else {
     sample_final = sample_type;
@@ -291,7 +300,7 @@ Usage(char** argv, const std::string& msg = std::string())
   std::cerr << "\t--streaming" << std::endl;
   std::cerr << "\t-b <batch size>" << std::endl;
   std::cerr << "\t-c <topk>" << std::endl;
-  std::cerr << "\t-s <NONE|INCEPTION|VGG>" << std::endl;
+  std::cerr << "\t-s <NONE|INCEPTION|VGG|EFFICIENTNET>" << std::endl;
   std::cerr << "\t-p <proprocessed output filename>" << std::endl;
   std::cerr << "\t-m <model name>" << std::endl;
   std::cerr << "\t-x <model version>" << std::endl;
@@ -320,7 +329,10 @@ Usage(char** argv, const std::string& msg = std::string())
             << std::endl
             << "    VGG: subtract mean BGR value (123, 117, 104) from"
             << std::endl
-            << "         each pixel." << std::endl;
+            << "         each pixel."
+            << std::endl
+            << "    EFFICIENTNET: scale each pixel RGB value to [0.0, 1.0)."
+            << std::endl;
   std::cerr
       << "If -x is not specified the most recent version (that is, the highest "
       << "numbered version) of the model will be used." << std::endl;
@@ -348,10 +360,12 @@ ParseScale(const std::string& str)
     return ScaleType::INCEPTION;
   } else if (str == "VGG") {
     return ScaleType::VGG;
+  } else if (str == "EFFICIENTNET") {
+    return ScaleType::EFFICIENTNET;
   }
 
   std::cerr << "unexpected scale type \"" << str
-            << "\", expecting NONE, INCEPTION or VGG" << std::endl;
+            << "\", expecting NONE, INCEPTION, VGG or EFFICIENTNET" << std::endl;
   exit(1);
 
   return ScaleType::NONE;
